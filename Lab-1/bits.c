@@ -143,8 +143,8 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
-  a = x & y;
-  b = ~x & ~y;
+  int a = x & y;
+  int b = ~x & ~y;
   return ~a & ~b;
 }
 /* 
@@ -165,7 +165,7 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  n = !(~x)
+  int n = !(~x);
   return !(~(x+1)^x|n);
 }
 /* 
