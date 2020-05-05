@@ -177,7 +177,11 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  int mask = 0xAA;           //0xAA
+  mask = (mask << 8) + 0xAA; //0xAA AA
+  mask = (mask << 8) + 0xAA; //0xAA AA AA
+  mask = (mask << 8) + 0xAA; //0xAA AA AA AA
+  return !((x & mask)^mask);
 }
 /* 
  * negate - return -x 
@@ -187,7 +191,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x+1;
 }
 //3
 /* 
@@ -200,7 +204,9 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  int min = 0x30;
+  int max = 0x39;
+  return (!((x+(~min+1))>>31)) & (!((max+(~x+1))>>31));
 }
 /* 
  * conditional - same as x ? y : z 
@@ -210,7 +216,8 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask = (!x + ~0x00); // if x == 0, mask = 0x00000000; else mask = 0xffffffff
+  return ((~mask) & z) | ((mask) & y);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -220,7 +227,11 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+	int sign_x = (x>>31) & 1;
+	int sign_y = (y>>31) & 1;
+	int y_x = y + (~x + 1);
+	int sign_y_x = (y_x>>31) & 1;
+	return (sign_x & !sign_y) | (!(sign_x^sign_y) & !sign_y_x);
 }
 //4
 /* 
