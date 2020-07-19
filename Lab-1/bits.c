@@ -227,11 +227,11 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-	int sign_x = (x>>31) & 1;
-	int sign_y = (y>>31) & 1;
-	int y_x = y + (~x + 1);
-	int sign_y_x = (y_x>>31) & 1;
-	return (sign_x & !sign_y) | (!(sign_x^sign_y) & !sign_y_x);
+  int sign_x = (x>>31) & 1;
+  int sign_y = (y>>31) & 1;
+  int y_x = y + (~x + 1);
+  int sign_y_x = (y_x>>31) & 1;
+  return (sign_x & !sign_y) | (!(sign_x^sign_y) & !sign_y_x);
 }
 //4
 /* 
@@ -243,7 +243,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  return (((x | (~x + 1)) >> 31) & 1) ^ 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -258,7 +258,30 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  int sign = (x >> 31) & 1;
+  int f = ~(!sign) + 1;
+  int of = ~f;
+  /*
+    * NOTing x to remove the effect of the sign bit.
+    * x = x < 0 ? ~x : x
+    */
+  x = ((f ^ ~x) & of) | ((of ^ x) & f);
+  /*
+    * We need to get the index of the highest bit 1.
+    * Easy to find that if it's even-numbered, `n` will lose the length of 1.
+    * But the odd-numvered won't.
+    * So let's left shift 1 (for the first 1) to fix this.
+    */
+  x |= (x << 1);
+  int n = 0;
+  // Get index with bisection.
+  n += (!!(x & (~0 << (n + 16)))) << 4;
+  n += (!!(x & (~0 << (n + 8)))) << 3;
+  n += (!!(x & (~0 << (n + 4)))) << 2;
+  n += (!!(x & (~0 << (n + 2)))) << 1;
+  n += !!(x & (~0 << (n + 1)));
+  // Add one more for the sign bit.
+  return n + 1;
 }
 //float
 /* 
@@ -273,7 +296,13 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  int exp = (uf&0x7f800000)>>23;
+  int sign = uf&(1<<31);
+  if(exp==0) return uf<<1|sign;
+  if(exp==255) return uf;
+  exp++;
+  if(exp==255) return 0x7f800000|sign;
+  return (exp<<23)|(uf&0x807fffff);
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -288,7 +317,20 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  int s_    = uf>>31;
+  int exp_  = ((uf&0x7f800000)>>23)-127;
+  int frac_ = (uf&0x007fffff)|0x00800000;
+  if(!(uf&0x7fffffff)) return 0;
+
+  if(exp_ > 31) return 0x80000000;
+  if(exp_ < 0) return 0;
+
+  if(exp_ > 23) frac_ <<= (exp_-23);
+  else frac_ >>= (23-exp_);
+
+  if(!((frac_>>31)^s_)) return frac_;
+  else if(frac_>>31) return 0x80000000;
+  else return ~frac_+1;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -304,5 +346,9 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+  int INF = 0xff<<23;
+  int exp = x + 127;
+  if(exp <= 0) return 0;
+  if(exp >= 255) return INF;
+  return exp << 23;
 }

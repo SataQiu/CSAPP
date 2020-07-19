@@ -211,8 +211,184 @@ int isLessOrEqual(int x, int y) {
 
 ##### 9. logicalNeg
 
+题意：实现逻辑非，x 为 0 返回 0 否则返回 1，允许使用 ~ & ^ | + << >>
 
+如果 x 为 0，那么 -x 依然是 0，二者或操作的结果符号位为 0，0 异或 1 为 1
+如果 x 不为 0，那么 -x 不为 0，二者或操作的结果符号位为 1，1 异或 1 为 0
 
+```cpp
+/* 
+ * logicalNeg - implement the ! operator, using all of 
+ *              the legal operators except !
+ *   Examples: logicalNeg(3) = 0, logicalNeg(0) = 1
+ *   Legal ops: ~ & ^ | + << >>
+ *   Max ops: 12
+ *   Rating: 4 
+ */
+int logicalNeg(int x) {
+  return (((x | (~x + 1)) >> 31) & 1) ^ 1;
+}
+```
+
+##### 10. howManyBits
+
+题意：求至少需要多少位二进制表示给定的整数，允许使用 ! ~ & ^ | + << >>
+
+统一负数为正数方式处理，二分查找最高位为 1，最后加上符号位
+
+```cpp
+/* howManyBits - return the minimum number of bits required to represent x in
+ *             two's complement
+ *  Examples: howManyBits(12) = 5
+ *            howManyBits(298) = 10
+ *            howManyBits(-5) = 4
+ *            howManyBits(0)  = 1
+ *            howManyBits(-1) = 1
+ *            howManyBits(0x80000000) = 32
+ *  Legal ops: ! ~ & ^ | + << >>
+ *  Max ops: 90
+ *  Rating: 4
+ */
+int howManyBits(int x) {
+  int sign = (x >> 31) & 1;
+  int f = ~(!sign) + 1;
+  int of = ~f;
+  /*
+    * NOTing x to remove the effect of the sign bit.
+    * x = x < 0 ? ~x : x
+    */
+  x = ((f ^ ~x) & of) | ((of ^ x) & f);
+  /*
+    * We need to get the index of the highest bit 1.
+    * Easy to find that if it's even-numbered, `n` will lose the length of 1.
+    * But the odd-numvered won't.
+    * So let's left shift 1 (for the first 1) to fix this.
+    */
+  x |= (x << 1);
+  int n = 0;
+  // Get index with bisection.
+  n += (!!(x & (~0 << (n + 16)))) << 4;
+  n += (!!(x & (~0 << (n + 8)))) << 3;
+  n += (!!(x & (~0 << (n + 4)))) << 2;
+  n += (!!(x & (~0 << (n + 2)))) << 1;
+  n += !!(x & (~0 << (n + 1)));
+  // Add one more for the sign bit.
+  return n + 1;
+}
+```
+
+#### 浮点数运算
+
+##### 1. floatScale2
+
+题意：求浮点数乘 2 后的结果
+
+```cpp
+/* 
+ * floatScale2 - Return bit-level equivalent of expression 2*f for
+ *   floating point argument f.
+ *   Both the argument and result are passed as unsigned int's, but
+ *   they are to be interpreted as the bit-level representation of
+ *   single-precision floating point values.
+ *   When argument is NaN, return argument
+ *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
+ *   Max ops: 30
+ *   Rating: 4
+ */
+unsigned floatScale2(unsigned uf) {
+  int exp = (uf&0x7f800000)>>23;
+  int sign = uf&(1<<31);
+  if(exp==0) return uf<<1|sign;
+  if(exp==255) return uf;
+  exp++;
+  if(exp==255) return 0x7f800000|sign;
+  return (exp<<23)|(uf&0x807fffff);
+}
+```
+
+##### 2. floatFloat2Int
+
+题意：将浮点数转换为整数
+
+```cpp
+/* 
+ * floatFloat2Int - Return bit-level equivalent of expression (int) f
+ *   for floating point argument f.
+ *   Argument is passed as unsigned int, but
+ *   it is to be interpreted as the bit-level representation of a
+ *   single-precision floating point value.
+ *   Anything out of range (including NaN and infinity) should return
+ *   0x80000000u.
+ *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
+ *   Max ops: 30
+ *   Rating: 4
+ */
+int floatFloat2Int(unsigned uf) {
+  int s_    = uf>>31;
+  int exp_  = ((uf&0x7f800000)>>23)-127;
+  int frac_ = (uf&0x007fffff)|0x00800000;
+  if(!(uf&0x7fffffff)) return 0;
+
+  if(exp_ > 31) return 0x80000000;
+  if(exp_ < 0) return 0;
+
+  if(exp_ > 23) frac_ <<= (exp_-23);
+  else frac_ >>= (23-exp_);
+
+  if(!((frac_>>31)^s_)) return frac_;
+  else if(frac_>>31) return 0x80000000;
+  else return ~frac_+1;
+}
+```
+
+##### 3. floatPower2
+
+题意：求 pow(2.0, x) 的值
+
+```cpp
+/* 
+ * floatPower2 - Return bit-level equivalent of the expression 2.0^x
+ *   (2.0 raised to the power x) for any 32-bit integer x.
+ *
+ *   The unsigned value that is returned should have the identical bit
+ *   representation as the single-precision floating-point number 2.0^x.
+ *   If the result is too small to be represented as a denorm, return
+ *   0. If too large, return +INF.
+ * 
+ *   Legal ops: Any integer/unsigned operations incl. ||, &&. Also if, while 
+ *   Max ops: 30 
+ *   Rating: 4
+ */
+unsigned floatPower2(int x) {
+  int INF = 0xff<<23;
+  int exp = x + 127;
+  if(exp <= 0) return 0;
+  if(exp >= 255) return INF;
+  return exp << 23;
+}
+```
+
+#### 实验结果展示
+
+```sh
+[root@dev Lab-1]# make
+[root@dev Lab-1]# ./btest
+Score	Rating	Errors	Function
+ 1	1	0	bitXor
+ 1	1	0	tmin
+ 1	1	0	isTmax
+ 2	2	0	allOddBits
+ 2	2	0	negate
+ 3	3	0	isAsciiDigit
+ 3	3	0	conditional
+ 3	3	0	isLessOrEqual
+ 4	4	0	logicalNeg
+ 4	4	0	howManyBits
+ 4	4	0	floatScale2
+ 4	4	0	floatFloat2Int
+ 4	4	0	floatPower2
+Total points: 36/36
+```
 
 #### 编译错误处理
 
@@ -246,4 +422,10 @@ make: *** [btest] Error 1
 
 ```sh
 apt-get install gcc-multilib
+```
+
+如果你使用的是 CentOS 系统，可以使用如下命令安装相关 32 位库：
+
+```sh
+yum install glibc-devel.i686 libgcc.i686
 ```
